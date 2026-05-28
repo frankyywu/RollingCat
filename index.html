@@ -306,6 +306,28 @@
       font-size: 13px;
     }
 
+    .agent-note {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .poem {
+      color: var(--ink);
+      background: #100b19;
+      border: 1px solid rgba(184, 144, 255, 0.24);
+      border-radius: 14px;
+      padding: 15px 16px;
+      white-space: pre-wrap;
+      font-size: 16px;
+    }
+
+    .discard {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
     .idea-title {
       font-size: clamp(24px, 4.8vw, 36px);
       line-height: 1.15;
@@ -342,6 +364,10 @@
     .box strong {
       color: var(--ink);
       font-weight: 650;
+    }
+
+    .wide {
+      grid-column: 1 / -1;
     }
 
     .loading {
@@ -578,69 +604,149 @@
       }));
     }
 
-    function makeIdea(raw, entries) {
-      const mode = $("#mode").value;
-      const [category, categoryPromise] = modeCopy[mode];
-      const seed = seedFrom(raw + entries.map((entry) => entry.title).join("|") + mode);
-      const nouns = entries.map((entry) => entry.title);
-      const a = nouns[0] || "随机性";
-      const b = nouns[1] || "灵感";
-      const c = nouns[2] || "协作";
-      const users = pick([
-        "卡在空白页前的产品经理",
-        "想做周末 demo 的 vibe coder",
-        "需要破题的黑客松小队",
-        "每天想发一个怪东西的创作者",
-        "对普通 brainstorming 过敏的小团队"
-      ], seed, 1);
-      const mechanic = pick([
-        "把随机词条压缩成三个可执行 feature",
-        "把互不相关的概念强行连成用户旅程",
-        "把词条之间的冲突变成产品差异化",
-        "把一个离谱组合改写成 24 小时 MVP",
-        "把猫语种子变成可分享的产品 brief"
-      ], seed, 2);
-      const form = pick([
-        "浏览器插件",
-        "单页 Web App",
-        "Slack/飞书 bot",
-        "Notion 模板生成器",
-        "桌面小组件"
-      ], seed, 3);
-      const hook = pick([
-        "每次生成都必须解释这不是灵感，而是猫授予的需求。",
-        "用户可以保存最离谱的三个 idea，第二天再让猫复审。",
-        "所有产品名都必须来自猫输入和随机词条的混成词。",
-        "团队投票时不能说“不合理”，只能说“猫还没解释完”。",
-        "生成结果自动拆成 landing page、数据结构和首屏交互。"
-      ], seed, 4);
+    const POETIC_AGENT_PROMPT = [
+      "你是 Agent 1：神经质诗意解读器。",
+      "输入是一串猫键盘随机种子和若干词条碎片。你不需要做产品，也不要假装每个词条都有信息价值。",
+      "请把它读成一段短小、紧张、带画面感的诗意 hallucination：允许矛盾、跳跃、偏执、误读。",
+      "输出应包含：一段 80-140 字的诗意解答、2-4 个意象关键词、被你判断为低信号的词条。"
+    ].join("\n");
+
+    const MAKE_SENSE_AGENT_PROMPT = [
+      "你是 Agent 2：Make Sense 产品架构师。",
+      "重要：我们不是在做文学实验，而是在做一个能够真实落地的 AI 产品。",
+      "你会收到 Agent 1 的诗意 nonsense、猫语种子和词条列表。你必须先过滤低信息词条，不要逐字过拟合随机词条。",
+      "请把 nonsense 抽象成真实用户问题，再设计一个可在 1-2 天内 vibe coding 出原型的 AI 产品。",
+      "输出必须具体：产品名、目标用户、痛点、核心循环、AI 工作流、MVP、成功指标、必须避免的伪需求。"
+    ].join("\n");
+
+    function entrySignal(entry) {
+      const text = `${entry.title} ${entry.extract}`;
+      let score = 45;
+      if (entry.source === "Wikipedia") score += 10;
+      if (entry.extract.length > 40) score += 10;
+      if (entry.extract.length > 100) score += 8;
+      if (/列表|消歧义|模板|小作品|位于|市镇|人口|行政区|公路|车站/.test(text)) score -= 26;
+      if (/是一?个|是一?种|系统|方法|理论|行为|关系|心理|工具|网络|记录|组织|协作|预测|感知/.test(text)) score += 12;
+      return Math.max(0, Math.min(100, score));
+    }
+
+    function splitSignal(entries) {
+      const scored = entries.map((entry) => ({ ...entry, signal: entrySignal(entry) }));
+      const useful = scored.filter((entry) => entry.signal >= 44).sort((a, b) => b.signal - a.signal);
+      const noise = scored.filter((entry) => entry.signal < 44);
+      return {
+        useful: useful.length ? useful.slice(0, 4) : scored.slice(0, 3),
+        noise
+      };
+    }
+
+    function poeticDecode(raw, entries) {
+      const { useful, noise } = splitSignal(entries);
+      const seed = seedFrom(`poem:${raw}:${entries.map((entry) => entry.title).join("|")}`);
+      const motifs = [
+        pick(["延迟", "过曝", "回声", "低电量", "折返", "潮湿", "误投递"], seed, 1),
+        pick(["空白页", "坏电梯", "未保存草稿", "备用钥匙", "会议室玻璃", "凌晨缓存"], seed, 2),
+        pick(["被迫清醒", "轻微逃跑", "反向索引", "自我归档", "临时秩序", "柔软报错"], seed, 3)
+      ];
+      const anchors = useful.map((entry) => entry.title).slice(0, 3);
+      const [a = "无名词条", b = "缺页", c = "噪声"] = anchors;
+      const text = [
+        `猫留下的不是答案，是一张被爪子揉皱的索引卡。`,
+        `「${a}」像门牌，「${b}」像走廊尽头的灯，「${c}」则像误入会议纪要的梦。`,
+        `这些词彼此不认识，却共同指向一种症状：人类在开始之前，就已经被整理、命名和解释耗尽。`,
+        `真正发亮的不是词条本身，而是它们之间那段不肯闭合的空隙。`
+      ].join("");
 
       return {
-        title: `${a} × ${b} 的${category}`,
-        pitch: `一个给${users}用的${form}。\n它用猫滚键盘作为随机种子，抽到「${a}」「${b}」「${c}」这类词条，再用 AI 把它们破解成产品方向：${categoryPromise}。`,
+        prompt: POETIC_AGENT_PROMPT,
+        text,
+        motifs,
+        discarded: noise.map((entry) => entry.title).slice(0, 4)
+      };
+    }
+
+    function makeSenseProduct(raw, entries, poem) {
+      const mode = $("#mode").value;
+      const [category, categoryPromise] = modeCopy[mode];
+      const { useful } = splitSignal(entries);
+      const seed = seedFrom(`sense:${raw}:${poem.text}:${mode}`);
+      const motif = pick(poem.motifs, seed, 1);
+      const productName = pick([
+        "Brief Distiller",
+        "概念堆肥机",
+        "Nonsense-to-MVP",
+        "Idea Triage Desk",
+        "需求梦话清洗器",
+        "Vibe Foundry"
+      ], seed, 2);
+      const users = pick([
+        "没有明确方向、但今晚必须做出 demo 的产品经理和 vibe coder",
+        "黑客松前 2 小时还在空白页前互相沉默的小队",
+        "需要把零散灵感变成可执行 PRD 的独立开发者",
+        "经常被“想个有意思的 AI 应用”卡住的小团队",
+        "想把内容灵感快速变成工具原型的创作者"
+      ], seed, 3);
+      const problem = pick([
+        "随机灵感很多，但没有一套机制把它们筛成可执行的问题、用户和首屏交互。",
+        "头脑风暴常常停在好笑的概念，缺少把概念压缩成真实 AI 产品的中间层。",
+        "产品经理需要的不是更多 idea，而是能判断哪些 idea 值得今晚开写的过滤器。",
+        "vibe coding 让实现变快，但破题仍然太依赖人的状态和会议气氛。"
+      ], seed, 4);
+      const coreLoop = pick([
+        "导入一组随机词条或聊天碎片，AI 先写一段荒诞解读，再由第二个 Agent 抽象成产品机会，最后输出可编辑 MVP brief。",
+        "用户输入噪声，系统分成 Poetry / Make Sense 两栏：左侧保留离谱联想，右侧持续把它压成问题、用户、功能和验收标准。",
+        "每次生成后，用户只做三件事：保留一个意象、删除一个伪需求、确认一个今晚能做的交互。",
+        "系统把随机词条打分，低信号内容进入废纸篓，高信号内容进入 AI 产品画布。"
+      ], seed, 5);
+      const aiWorkflow = [
+        "Agent 1 生成诗意 hallucination，刻意不做产品判断。",
+        "Agent 2 读取 hallucination、词条信号分和用户选择的产品类型，过滤低信号碎片。",
+        "Agent 2 输出真实 AI 产品 brief：问题、目标用户、核心循环、数据输入、模型调用点、MVP scope。",
+        "用户一键复制 brief 给 Codex 或 Cursor 开始实现。"
+      ].join(" ");
+      const mvp = pick([
+        "一个单页 Web App：输入随机词条，显示双 Agent 输出，允许用户锁定/删除词条，然后复制 MVP brief。",
+        "一个浏览器内工具：把当前页面随机抽词，生成 Poetry / Make Sense 两段式产品 brief。",
+        "一个飞书/Slack bot：团队丢一串乱码或关键词，bot 回一个可执行 AI 产品方案和 issue list。",
+        "一个 Notion 模板生成器：把随机词条转成产品画布、首屏文案和 5 条开发任务。"
+      ], seed, 6);
+      const metric = pick([
+        "用户从空白页到复制第一版产品 brief 的时间低于 90 秒。",
+        "生成结果里至少 60% 能被用户保留一个核心交互并继续开发。",
+        "每次 session 至少产出一个明确输入、一个模型调用点和一个可演示输出。",
+        "用户愿意把生成结果发给队友讨论，而不是只截图当笑话。"
+      ], seed, 7);
+      const antiRequirement = pick([
+        "不要做泛泛的灵感库；必须逼用户落到一个 AI 输入、处理和输出。",
+        "不要把所有随机词都塞进产品名；只保留能解释用户问题的抽象。",
+        "不要生成十个方向；只生成一个可开工方向和一个明确首屏。",
+        "不要假装它能判断商业成败；它只负责把荒诞变成可测试原型。"
+      ], seed, 8);
+      const anchors = useful.map((entry) => entry.title).slice(0, 3).join(" / ") || "猫语噪声";
+
+      return {
+        prompt: MAKE_SENSE_AGENT_PROMPT,
+        title: `${productName}: ${motif}产品破题器`,
+        pitch: `一个${category}方向的 AI 产品原型。它不迷信随机词条，而是把「${anchors}」这类碎片先交给诗意 Agent 发酵，再由 Make Sense Agent 收敛成真实用户问题：${categoryPromise}。`,
         users,
-        mechanic,
-        mvp: pick([
-          `输入猫语，抽 ${Math.min(entries.length, 8)} 个词条，输出一页产品 brief。`,
-          "保存三次生成结果，让用户比较哪个最适合今晚开写。",
-          "生成首屏文案、核心按钮和一个 fake data demo。",
-          "把词条变成 feature cards，用户拖拽组合成 MVP。",
-          "一键生成 README、产品名和第一版 issue list。"
-        ], seed, 5),
-        whyNow: pick([
-          "AI 已经足够会圆，人类反而需要更好的随机种子。",
-          "vibe coding 降低了实现成本，离谱想法也值得快速试错。",
-          "传统头脑风暴太像开会，猫提供了更诚实的噪声。",
-          "产品灵感正在变成内容，生成过程本身也有传播性。",
-          "小团队需要能立刻开工的概念，不需要又一份厚 PRD。"
-        ], seed, 6),
-        hook,
+        problem,
+        coreLoop,
+        aiWorkflow,
+        mvp,
+        metric,
+        antiRequirement,
         aiPowered: false
       };
     }
 
+    function localCrack(raw, entries) {
+      const poem = poeticDecode(raw, entries);
+      const product = makeSenseProduct(raw, entries, poem);
+      return { poem, product };
+    }
+
     async function crackIdea(raw, entries) {
-      const localIdea = makeIdea(raw, entries);
+      const local = localCrack(raw, entries);
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 900);
       try {
@@ -655,31 +761,35 @@
               title: entry.title,
               extract: entry.extract,
               source: entry.source
-            }))
+            })),
+            prompts: {
+              poeticAgent: POETIC_AGENT_PROMPT,
+              makeSenseAgent: MAKE_SENSE_AGENT_PROMPT
+            }
           }),
           signal: controller.signal
         });
         if (!response.ok) throw new Error("AI idea service unavailable");
         const data = await response.json();
-        if (!data || data.ok === false || !data.idea) return localIdea;
+        if (!data || data.ok === false) return local;
         return {
-          ...localIdea,
-          ...data.idea,
-          aiPowered: true
+          poem: { ...local.poem, ...(data.poem || {}) },
+          product: { ...local.product, ...(data.idea || data.product || {}), aiPowered: true }
         };
       } catch (error) {
-        return localIdea;
+        return local;
       } finally {
         window.clearTimeout(timeout);
       }
     }
 
-    function renderResult(raw, entries, idea) {
+    function renderResult(raw, entries, decoded) {
+      const { poem, product } = decoded;
       result.innerHTML = `
         <div class="card">
           <div class="card-head">
             <b>PRODUCT ORACLE</b>
-            <span>${entries.length} 个词条 · ${idea.aiPowered ? "AI 服务破解" : "本地原型破解"} · ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span>${entries.length} 个词条 · ${product.aiPowered ? "双 Agent 服务" : "本地双 Agent 原型"} · ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
           </div>
           <div class="card-body">
             <div class="section-title">猫语种子</div>
@@ -698,19 +808,26 @@
               `).join("")}
             </div>
 
-            <div class="section-title">AI 破解出的产品思路</div>
-            <h2 class="idea-title">${escapeHtml(idea.title)}</h2>
-            <p class="pitch">${escapeHtml(idea.pitch)}</p>
+            <div class="section-title">Agent 1 / 诗意化解答</div>
+            <div class="poem">${escapeHtml(poem.text)}</div>
+            <div class="agent-note">意象：${(poem.motifs || []).map(escapeHtml).join(" / ") || "无"} </div>
+            <div class="discard">低信号碎片：${(poem.discarded || []).length ? poem.discarded.map(escapeHtml).join(" / ") : "暂未丢弃"}</div>
+
+            <div class="section-title">Agent 2 / Make Sense：落地 AI 产品</div>
+            <h2 class="idea-title">${escapeHtml(product.title)}</h2>
+            <p class="pitch">${escapeHtml(product.pitch)}</p>
 
             <div class="grid">
-              <div class="box"><small>目标用户</small><strong>${escapeHtml(idea.users)}</strong></div>
-              <div class="box"><small>核心机制</small><strong>${escapeHtml(idea.mechanic)}</strong></div>
-              <div class="box"><small>今晚能做的 MVP</small><strong>${escapeHtml(idea.mvp)}</strong></div>
-              <div class="box"><small>为什么现在做</small><strong>${escapeHtml(idea.whyNow)}</strong></div>
+              <div class="box"><small>目标用户</small><strong>${escapeHtml(product.users)}</strong></div>
+              <div class="box"><small>真实痛点</small><strong>${escapeHtml(product.problem)}</strong></div>
+              <div class="box wide"><small>核心循环</small><strong>${escapeHtml(product.coreLoop)}</strong></div>
+              <div class="box wide"><small>AI 工作流</small><strong>${escapeHtml(product.aiWorkflow)}</strong></div>
+              <div class="box"><small>今晚能做的 MVP</small><strong>${escapeHtml(product.mvp)}</strong></div>
+              <div class="box"><small>成功指标</small><strong>${escapeHtml(product.metric)}</strong></div>
             </div>
 
-            <div class="section-title">传播钩子</div>
-            <div class="box"><strong>${escapeHtml(idea.hook)}</strong></div>
+            <div class="section-title">必须避免的伪需求</div>
+            <div class="box"><strong>${escapeHtml(product.antiRequirement)}</strong></div>
 
             <div class="actions">
               <button class="ghost" id="copyBtn" type="button">复制产品 brief</button>
@@ -722,7 +839,7 @@
       result.querySelector(".raw").textContent = raw || "∅";
       result.classList.remove("hidden");
       result.scrollIntoView({ behavior: "smooth", block: "start" });
-      $("#copyBtn").addEventListener("click", () => copyBrief(raw, entries, idea));
+      $("#copyBtn").addEventListener("click", () => copyBrief(raw, entries, decoded));
       $("#againBtn").addEventListener("click", () => {
         result.classList.add("hidden");
         resetCapture();
@@ -730,20 +847,27 @@
       });
     }
 
-    function copyBrief(raw, entries, idea) {
+    function copyBrief(raw, entries, decoded) {
+      const { poem, product } = decoded;
       const text = [
-        `Rolling Cat 产品思路：${idea.title}`,
+        `Rolling Cat 产品思路：${product.title}`,
         "",
         `猫语种子：${raw || "∅"}`,
         `词条：${entries.map((entry) => entry.title).join(" / ")}`,
         "",
-        idea.pitch,
+        "Agent 1 诗意解答：",
+        poem.text,
         "",
-        `目标用户：${idea.users}`,
-        `核心机制：${idea.mechanic}`,
-        `MVP：${idea.mvp}`,
-        `为什么现在做：${idea.whyNow}`,
-        `传播钩子：${idea.hook}`
+        "Agent 2 Make Sense：",
+        product.pitch,
+        "",
+        `目标用户：${product.users}`,
+        `真实痛点：${product.problem}`,
+        `核心循环：${product.coreLoop}`,
+        `AI 工作流：${product.aiWorkflow}`,
+        `MVP：${product.mvp}`,
+        `成功指标：${product.metric}`,
+        `避免伪需求：${product.antiRequirement}`
       ].join("\n");
       navigator.clipboard?.writeText(text).then(() => {
         $("#copyBtn").textContent = "已复制";
@@ -756,9 +880,9 @@
       loading.classList.add("show");
       const raw = state.buffer.trim();
       const entries = await lexiconFromCats(raw);
-      const idea = await crackIdea(raw, entries);
+      const decoded = await crackIdea(raw, entries);
       loading.classList.remove("show");
-      renderResult(raw, entries, idea);
+      renderResult(raw, entries, decoded);
     }
 
     function humanInput() {

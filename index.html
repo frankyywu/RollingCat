@@ -824,6 +824,20 @@
       box-shadow: 0 0 0 var(--line);
     }
 
+    button:disabled {
+      color: #9c8f93;
+      background: #e7dbc4;
+      cursor: not-allowed;
+      translate: 0 0;
+      box-shadow: 2px 2px 0 var(--line);
+    }
+
+    button:disabled:hover {
+      background: #e7dbc4;
+      translate: 0 0;
+      box-shadow: 2px 2px 0 var(--line);
+    }
+
     .topbar {
       position: static;
       min-height: 64px;
@@ -1120,6 +1134,34 @@
       padding: clamp(16px, 2.5vw, 24px);
     }
 
+    textarea[readonly] {
+      cursor: default;
+    }
+
+    .input-shell.capturing {
+      background: #fffdf5;
+      box-shadow: 8px 8px 0 var(--line);
+    }
+
+    .input-shell.capturing textarea {
+      outline: 4px solid #ffdca8;
+      outline-offset: -8px;
+      background:
+        linear-gradient(90deg, rgba(51, 44, 56, 0.06) 1px, transparent 1px),
+        linear-gradient(rgba(51, 44, 56, 0.06) 1px, transparent 1px),
+        #fffaf0;
+    }
+
+    .input-shell.capturing .live-dot {
+      animation: pixelPulse 760ms steps(2, end) infinite;
+    }
+
+    @keyframes pixelPulse {
+      50% {
+        background: var(--pink);
+      }
+    }
+
     textarea::placeholder {
       color: #a5989a;
     }
@@ -1279,12 +1321,10 @@
           <small>Meowracle Machine</small>
         </div>
       </div>
-      <div class="combo" aria-label="提交快捷键">
-        <span>猫滚完以后，人类按</span>
-        <kbd id="modKey">⌘</kbd>
-        <span>+</span>
-        <kbd>Enter</kbd>
-        <span>触发解读</span>
+      <div class="combo" aria-label="猫键盘安全模式">
+        <span>猫键盘安全模式</span>
+        <kbd>拦截按键</kbd>
+        <span>只认人类点击</span>
       </div>
     </header>
 
@@ -1293,7 +1333,7 @@
         <div class="stage-header">
           <div class="title-block">
             <h2 id="pageTitle">让猫踩出乱码，让 AI 解释命运。</h2>
-            <p>邀请猫神自由路过键盘、踩一下、蹭一下、尾巴扫一下。页面会接住所有猫语，但只有人类组合键才能提交。</p>
+            <p>邀请猫神自由路过键盘、踩一下、蹭一下、尾巴扫一下。页面会拦截所有按键，只记录猫语；最后只有人类点击按钮才会收谕。</p>
           </div>
           <div class="cat-window" aria-hidden="true">
             <div class="cat-sigil">
@@ -1323,12 +1363,14 @@
                 <option value="cyber">赛博三花神</option>
                 <option value="worker">加班狸花神</option>
               </select>
+              <button id="startBtn" class="primary" type="button">开始接收</button>
+              <button id="collectBtn" class="primary" type="button" disabled>收谕</button>
               <button id="fakeCat" type="button">模拟猫神</button>
               <button id="clearBtn" class="danger" type="button">清空</button>
             </div>
           </div>
 
-          <textarea id="catInput" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="把光标留在这里。猫神经过时，键盘会自己显灵。"></textarea>
+          <textarea id="catInput" readonly spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="点击「开始接收」后，把猫请到键盘上。它怎么按都不会触发页面，只会留下猫语。"></textarea>
 
           <div class="input-footer" aria-label="猫语指标">
             <div class="metric">
@@ -1351,8 +1393,8 @@
         </div>
 
         <div class="hint-strip">
-          <span><strong>现场模式：</strong>把电脑放稳，输入框保持聚焦，让猫自由通过键盘。</span>
-          <span>屏幕会保留原始猫谕，方便投影和截图。</span>
+          <span><strong>现场模式：</strong>先点「开始接收」，再让猫自由通过键盘。</span>
+          <span>猫滚完以后点「收谕」；键盘本身不会提交。</span>
         </div>
       </section>
 
@@ -1384,14 +1426,16 @@
 
   <script>
     const input = document.querySelector("#catInput");
+    const inputShell = document.querySelector(".input-shell");
     const readingNode = document.querySelector("#reading");
     const persona = document.querySelector("#persona");
-    const modKey = document.querySelector("#modKey");
     const focusState = document.querySelector("#focusState");
     const toast = document.querySelector("#toast");
     const historyList = document.querySelector("#historyList");
     const historyCount = document.querySelector("#historyCount");
     const temper = document.querySelector("#temper");
+    const startBtn = document.querySelector("#startBtn");
+    const collectBtn = document.querySelector("#collectBtn");
     const charCount = document.querySelector("#charCount");
     const chaosScore = document.querySelector("#chaosScore");
     const repeatScore = document.querySelector("#repeatScore");
@@ -1399,7 +1443,9 @@
 
     const state = {
       currentReading: null,
-      history: []
+      history: [],
+      capturing: false,
+      startedAt: 0
     };
 
     const personaCopy = {
@@ -1492,6 +1538,56 @@
       chaosScore.textContent = `${stats.chaos}%`;
       repeatScore.textContent = stats.run;
       symbolScore.textContent = `${stats.symbolRatio}%`;
+      collectBtn.disabled = stats.length === 0;
+    }
+
+    function setCaptureMode(active) {
+      state.capturing = active;
+      state.startedAt = active ? performance.now() : state.startedAt;
+      inputShell.classList.toggle("capturing", active);
+      startBtn.disabled = active;
+      focusState.textContent = active ? "猫键盘安全模式开启" : "等待人类点击开始";
+      if (active) {
+        input.focus({ preventScroll: true });
+      }
+      updateMetrics();
+    }
+
+    function keyToCatChar(event) {
+      if (event.key.length === 1) return event.key;
+      if (event.key === "Enter") return "\n";
+      if (event.key === "Tab") return "\t";
+      if (event.key === "Backspace") return "⌫";
+      if (event.key === "Delete") return "⌦";
+      if (event.key === "Escape") return "⎋";
+      if (event.key.startsWith("Arrow")) return "↕";
+      return "";
+    }
+
+    function appendCatText(text) {
+      if (!text) return;
+      input.value = `${input.value}${text}`;
+      input.scrollTop = input.scrollHeight;
+      updateMetrics();
+    }
+
+    function interceptCatKeyboard(event) {
+      if (!state.capturing) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      appendCatText(keyToCatChar(event));
+    }
+
+    function startCapture() {
+      input.value = "";
+      setCaptureMode(true);
+      showToast("猫键盘安全模式已开启");
+    }
+
+    function collectOracle() {
+      setCaptureMode(false);
+      submitOracle();
     }
 
     function buildReading(text) {
@@ -1626,10 +1722,10 @@
     }
 
     function submitOracle() {
+      setCaptureMode(false);
       const data = buildReading(input.value);
       if (!data) {
         showToast("猫神还没有留下足够的键盘痕迹");
-        input.focus();
         return;
       }
       state.currentReading = data;
@@ -1770,32 +1866,37 @@
       for (let index = 0; index < extraLength; index += 1) {
         extra += catKeys[(seed + index * 7) % catKeys.length];
       }
-      input.value = `${input.value}${input.value ? "\n" : ""}${base}${extra}`;
-      input.focus();
-      updateMetrics();
+      appendCatText(`${input.value ? "\n" : ""}${base}${extra}`);
       showToast("模拟猫神已路过键盘");
     }
 
-    input.addEventListener("input", updateMetrics);
+    document.addEventListener("keydown", interceptCatKeyboard, true);
+    document.addEventListener("keypress", (event) => {
+      if (!state.capturing) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    }, true);
+    document.addEventListener("beforeinput", (event) => {
+      if (!state.capturing) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+
     input.addEventListener("focus", () => {
-      focusState.textContent = "猫语接收中";
+      focusState.textContent = state.capturing ? "猫键盘安全模式开启" : "等待人类点击开始";
     });
     input.addEventListener("blur", () => {
-      focusState.textContent = "点击输入区继续接收猫语";
+      focusState.textContent = state.capturing ? "猫键盘安全模式开启" : "等待人类点击开始";
     });
 
-    document.addEventListener("keydown", (event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-        event.preventDefault();
-        submitOracle();
-      }
-    });
-
+    startBtn.addEventListener("click", startCapture);
+    collectBtn.addEventListener("click", collectOracle);
     document.querySelector("#fakeCat").addEventListener("click", simulateCat);
     document.querySelector("#clearBtn").addEventListener("click", () => {
       input.value = "";
+      setCaptureMode(false);
       updateMetrics();
-      input.focus();
       showToast("键盘祭坛已清空");
     });
     document.querySelector("#copyBtn").addEventListener("click", copyReading);
@@ -1810,8 +1911,7 @@
       showToast("已召回历史猫谕");
     });
 
-    modKey.textContent = navigator.platform.toLowerCase().includes("mac") ? "⌘" : "Ctrl";
-    input.focus();
+    setCaptureMode(false);
     updateMetrics();
   </script>
 </body>

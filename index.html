@@ -646,15 +646,17 @@
 
     const POETIC_AGENT_PROMPT = [
       "你是 Agent 1：神经质诗意解读器。",
-      "输入是一串猫键盘随机种子和若干词条碎片。你不需要做产品，也不要假装每个词条都有信息价值。",
+      "输入是一组概念卡片。你不知道这些卡片来自哪里，也不需要解释来源。",
+      "你不需要做产品，也不要假装每个概念都有信息价值。",
       "请把它读成一段短小、紧张、带画面感的诗意 hallucination：允许矛盾、跳跃、偏执、误读。",
-      "输出应包含：一段 80-140 字的诗意解答、2-4 个意象关键词、被你判断为低信号的词条。"
+      "输出应包含：一段 80-140 字的诗意解答、2-4 个意象关键词、被你判断为低信号的概念。"
     ].join("\n");
 
     const MAKE_SENSE_AGENT_PROMPT = [
       "你是 Agent 2：Make Sense 产品架构师。",
       "重要：我们不是在做文学实验，而是在做一个能够真实落地的 AI 产品。",
-      "你会收到 Agent 1 的诗意 nonsense、猫语种子和词条列表。你必须先过滤低信息词条，不要逐字过拟合随机词条。",
+      "你会收到 Agent 1 的诗意 nonsense 和一组概念卡片。你不知道这些概念来自哪里，也绝对不要提到随机、猫、键盘、占卜、神谕、词条生成器或本产品本身。",
+      "你必须先过滤低信息概念，不要逐字过拟合每张卡片。",
       "请把 nonsense 抽象成真实用户问题，再设计一个可在 1-2 天内 vibe coding 出原型的 AI 产品。",
       "输出必须具体：产品名、目标用户、痛点、核心循环、AI 工作流、MVP、成功指标、必须避免的伪需求。"
     ].join("\n");
@@ -691,12 +693,12 @@
         pick(["被迫清醒", "轻微逃跑", "反向索引", "自我归档", "临时秩序", "柔软报错"], seed, 3)
       ];
       const anchors = useful.map((entry) => entry.title).slice(0, 3);
-      const [a = "无名词条", b = "缺页", c = "噪声"] = anchors;
+      const [a = "无名概念", b = "缺页", c = "噪声"] = anchors;
       const text = [
-        `猫留下的不是答案，是一张被爪子揉皱的索引卡。`,
+        `这组概念不像答案，更像一张被雨水泡皱的索引卡。`,
         `「${a}」像门牌，「${b}」像走廊尽头的灯，「${c}」则像误入会议纪要的梦。`,
         `这些词彼此不认识，却共同指向一种症状：人类在开始之前，就已经被整理、命名和解释耗尽。`,
-        `真正发亮的不是词条本身，而是它们之间那段不肯闭合的空隙。`
+        `真正发亮的不是概念本身，而是它们之间那段不肯闭合的空隙。`
       ].join("");
 
       return {
@@ -709,67 +711,71 @@
 
     function makeSenseProduct(raw, entries, poem) {
       const mode = $("#mode").value;
-      const [category, categoryPromise] = modeCopy[mode];
+      const [category] = modeCopy[mode];
       const { useful } = splitSignal(entries);
       const seed = seedFrom(`sense:${raw}:${poem.text}:${mode}`);
       const motif = pick(poem.motifs, seed, 1);
+      const byDeck = (deck) => useful.find((entry) => entry.deck === deck) || entries.find((entry) => entry.deck === deck);
+      const capability = byDeck("ai") || useful[0] || entries[0] || { title: "AI co-pilot", extract: "在工作流旁边实时建议、补全和纠错。" };
+      const scenario = byDeck("workflow") || useful[1] || entries[1] || { title: "团队协作", extract: "多人需要围绕同一任务保持上下文。" };
+      const interfaceCard = byDeck("interface") || useful[2] || entries[2] || { title: "收件箱界面", extract: "所有待处理对象进入一个入口。" };
+      const weird = byDeck("weird") || useful[3] || entries[3] || { title: motif, extract: "只作为交互隐喻。" };
       const productName = pick([
-        "Brief Distiller",
-        "MVP Forge",
-        "Nonsense-to-MVP",
-        "Idea Triage Desk",
-        "Signal Canvas",
-        "Vibe Foundry"
+        "FlowPilot",
+        "Context Desk",
+        "SignalOps",
+        "Action Canvas",
+        "TraceKit",
+        "LoopForge"
       ], seed, 2);
       const users = pick([
-        "没有明确方向、但今晚必须做出 demo 的产品经理和 vibe coder",
-        "黑客松前 2 小时还在空白页前互相沉默的小队",
-        "需要把零散灵感变成可执行 PRD 的独立开发者",
-        "经常被“想个有意思的 AI 应用”卡住的小团队",
-        "想把内容灵感快速变成工具原型的创作者"
+        `需要处理${scenario.title}的运营和产品团队`,
+        `在${scenario.title}里反复切换系统的一线员工`,
+        `负责把${scenario.title}变成标准流程的小团队负责人`,
+        `希望用 AI 降低${scenario.title}沟通成本的创业团队`,
+        `每天被${scenario.title}打断深度工作的知识工作者`
       ], seed, 3);
       const problem = pick([
-        "随机灵感很多，但没有一套机制把它们筛成可执行的问题、用户和首屏交互。",
-        "头脑风暴常常停在好笑的概念，缺少把概念压缩成真实 AI 产品的中间层。",
-        "产品经理需要的不是更多 idea，而是能判断哪些 idea 值得今晚开写的过滤器。",
-        "vibe coding 让实现变快，但破题仍然太依赖人的状态和会议气氛。"
+        `${scenario.title}里的上下文分散在多个系统，用户需要反复查找、复制和解释。`,
+        `${scenario.title}通常靠人工经验推进，缺少一个能持续记录状态并提醒下一步的协作层。`,
+        `团队知道${scenario.title}很重要，但每次复盘都很难还原过程、责任和遗漏点。`,
+        `${scenario.title}产生大量非结构化信息，真正可执行的动作被埋在聊天、文件和表格里。`
       ], seed, 4);
       const coreLoop = pick([
-        "导入一组随机词条或聊天碎片，AI 先写一段荒诞解读，再由第二个 Agent 抽象成产品机会，最后输出可编辑 MVP brief。",
-        "用户输入噪声，系统分成 Poetry / Make Sense 两栏：左侧保留离谱联想，右侧持续把它压成问题、用户、功能和验收标准。",
-        "每次生成后，用户只做三件事：保留一个意象、删除一个伪需求、确认一个今晚能做的交互。",
-        "系统把随机词条打分，低信号内容进入废纸篓，高信号内容进入 AI 产品画布。"
+        `用户把相关文件、网页或聊天记录丢进${interfaceCard.title}，AI 自动抽取状态、风险和下一步动作，用户确认后写回原系统。`,
+        `系统持续监听${scenario.title}相关信息，用${capability.title}归纳变化，再通过${interfaceCard.title}提示最需要处理的三件事。`,
+        `用户打开一个对象，看到时间线、证据、建议动作和自动执行按钮；每次确认都会沉淀成团队记忆。`,
+        `AI 先把输入材料结构化，再生成行动草案；用户只做批准、修改、分派三个动作。`
       ], seed, 5);
       const aiWorkflow = [
-        "Agent 1 生成诗意 hallucination，刻意不做产品判断。",
-        "Agent 2 读取 hallucination、词条信号分和用户选择的产品类型，过滤低信号碎片。",
-        "Agent 2 输出真实 AI 产品 brief：问题、目标用户、核心循环、数据输入、模型调用点、MVP scope。",
-        "用户一键复制 brief 给 Codex 或 Cursor 开始实现。"
+        `用${capability.title}读取用户提供的材料。`,
+        `结构化抽取对象、时间、责任人、风险和待办。`,
+        `根据历史上下文生成建议动作，并标注证据来源。`,
+        `用户确认后，系统把结果同步到任务、邮件、CRM 或知识库。`
       ].join(" ");
       const mvp = pick([
-        "一个单页 Web App：输入随机词条，显示双 Agent 输出，允许用户锁定/删除词条，然后复制 MVP brief。",
-        "一个浏览器内工具：把当前页面随机抽词，生成 Poetry / Make Sense 两段式产品 brief。",
-        "一个飞书/Slack bot：团队丢一串乱码或关键词，bot 回一个可执行 AI 产品方案和 issue list。",
-        "一个 Notion 模板生成器：把随机词条转成产品画布、首屏文案和 5 条开发任务。"
+        `一个单页 Web App：上传一段${scenario.title}材料，输出结构化摘要、风险列表和下一步动作。`,
+        `一个浏览器侧边栏：读取当前网页或 SaaS 页面，用${capability.title}生成可执行操作建议。`,
+        `一个 Slack/飞书 bot：转发一段对话，自动生成责任人、截止时间和跟进草稿。`,
+        `一个轻量仪表盘：用${interfaceCard.title}展示所有待处理对象，并允许一键确认 AI 建议。`
       ], seed, 6);
       const metric = pick([
-        "用户从空白页到复制第一版产品 brief 的时间低于 90 秒。",
-        "生成结果里至少 60% 能被用户保留一个核心交互并继续开发。",
-        "每次 session 至少产出一个明确输入、一个模型调用点和一个可演示输出。",
-        "用户愿意把生成结果发给队友讨论，而不是只截图当笑话。"
+        `用户处理一次${scenario.title}的平均时间下降 40%。`,
+        `AI 建议动作的人工采纳率超过 60%。`,
+        `每个对象都能追溯到至少 2 条证据来源。`,
+        `团队每周遗漏的跟进事项减少 30%。`
       ], seed, 7);
       const antiRequirement = pick([
-        "不要做泛泛的灵感库；必须逼用户落到一个 AI 输入、处理和输出。",
-        "不要把所有随机词都塞进产品名；只保留能解释用户问题的抽象。",
-        "不要生成十个方向；只生成一个可开工方向和一个明确首屏。",
-        "不要假装它能判断商业成败；它只负责把荒诞变成可测试原型。"
+        "不要做成又一个聊天框；必须嵌入用户已有工作流并产生可确认动作。",
+        "不要追求全自动闭环；高风险动作必须让用户确认。",
+        "不要只做摘要；必须输出责任、证据和下一步。",
+        "不要一开始覆盖所有系统；先打通一个高频入口和一个写回出口。"
       ], seed, 8);
-      const anchors = useful.map((entry) => entry.title).slice(0, 3).join(" / ") || "猫语噪声";
 
       return {
         prompt: MAKE_SENSE_AGENT_PROMPT,
-        title: `${productName}: AI 产品破题工作台`,
-        pitch: `一个${category}方向的 AI 产品原型。它不迷信随机词条，而是把「${anchors}」这类碎片先交给诗意 Agent 发酵，再由 Make Sense Agent 收敛成真实用户问题：${categoryPromise}。本轮保留下来的诗意意象是「${motif}」，但它只作为创意调味，不进入产品需求本体。`,
+        title: `${productName}: ${scenario.title} AI ${category}`,
+        pitch: `一个面向${users}的${category}。它用${capability.title}处理${scenario.title}中的非结构化上下文，并通过${interfaceCard.title}把风险、证据和下一步动作变成可确认的工作流。${weird.title}只作为体验隐喻：让系统像一个会替你找回遗漏信息的工作台，而不是一个泛泛聊天框。`,
         users,
         problem,
         coreLoop,
@@ -796,10 +802,8 @@
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            raw,
             mode: $("#mode").value,
-            entries: entries.map((entry) => ({
-              char: entry.char,
+            conceptCards: entries.map((entry) => ({
               title: entry.title,
               extract: entry.extract,
               source: entry.source
@@ -834,7 +838,7 @@
             <span>${entries.length} 个词条 · ${product.aiPowered ? "双 Agent 服务" : "本地双 Agent 原型"} · ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
           </div>
           <div class="card-body">
-            <div class="section-title">猫语种子</div>
+            <div class="section-title">输入种子</div>
             <div class="raw"></div>
 
             <div class="section-title">词库撞击结果</div>
@@ -873,7 +877,7 @@
 
             <div class="actions">
               <button class="ghost" id="copyBtn" type="button">复制产品 brief</button>
-              <button class="ghost" id="againBtn" type="button">再让猫滚一轮</button>
+              <button class="ghost" id="againBtn" type="button">再生成一轮</button>
             </div>
           </div>
         </div>
@@ -892,10 +896,10 @@
     function copyBrief(raw, entries, decoded) {
       const { poem, product } = decoded;
       const text = [
-        `Rolling Cat 产品思路：${product.title}`,
+        `产品思路：${product.title}`,
         "",
-        `猫语种子：${raw || "∅"}`,
-        `词条：${entries.map((entry) => entry.title).join(" / ")}`,
+        `输入种子：${raw || "∅"}`,
+        `概念卡：${entries.map((entry) => entry.title).join(" / ")}`,
         "",
         "Agent 1 诗意解答：",
         poem.text,

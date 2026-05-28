@@ -456,8 +456,8 @@
         </div>
       </div>
 
-      <div id="loading" class="loading">正在从词库里撞词条，然后把它们硬解释成产品机会...</div>
-      <div class="note">词条优先来自 Wikipedia 随机摘要；为保证速度，最多取前 8 枚爪印。若接入 /api/idea，会由 AI 服务重写产品 brief。</div>
+      <div id="loading" class="loading">正在从多组创意牌堆里抽词，然后让两个 Agent 互相折磨...</div>
+      <div class="note">词库由 AI 产业能力、真实业务场景、界面形态和越界创意来源混合而成；若接入 /api/idea，会由 AI 服务重写产品 brief。</div>
     </section>
 
     <section id="result" class="hidden"></section>
@@ -484,23 +484,76 @@
       buffer: ""
     };
 
-    const fallbackLexicon = [
-      ["排队论", "把等待、拥堵和资源分配变成可视化决策。"],
-      ["民俗学", "把日常行为解释成一套可参与的轻仪式。"],
-      ["折纸", "把复杂结构压成几步可执行的折叠流程。"],
-      ["蜂巢", "去中心化协作、角色分工和密集反馈。"],
-      ["暗物质", "看不见但影响全局的隐藏变量。"],
-      ["便利店", "高频、低决策成本、随手就能完成。"],
-      ["潮汐", "周期性变化和提前预判的节奏系统。"],
-      ["剧本杀", "把任务包装成角色、线索和结局。"],
-      ["温室", "为脆弱想法提供可控环境。"],
-      ["地铁图", "把复杂路径抽象成少数可换乘节点。"],
-      ["睡眠债", "把被忽视的状态欠账量化并还款。"],
-      ["备忘录", "轻量捕捉、延迟整理、随时召回。"],
-      ["天气雷达", "提前感知即将发生的情绪或任务变化。"],
-      ["共享厨房", "把分散需求聚合到一个临时协作场景。"],
-      ["盲盒", "用可控随机性制造探索欲。"]
-    ];
+    const lexiconDecks = {
+      ai: {
+        label: "AI 产业能力",
+        items: [
+          ["多模态检索", "把文字、图片、音频和文件统一进一个可追问的索引。"],
+          ["Agentic workflow", "让模型拆任务、调用工具、检查结果并继续下一步。"],
+          ["RAG 记忆层", "把用户资料、历史上下文和知识库变成可引用的长期记忆。"],
+          ["结构化抽取", "从非结构化内容里抽出字段、状态、责任人和下一步。"],
+          ["合成数据", "用模型制造训练、测试、演示所需的边界样本。"],
+          ["评测集生成", "把主观质量转成可回归测试的样例和评分规则。"],
+          ["语音代理", "用实时语音理解和行动替代传统表单或客服流程。"],
+          ["模型路由", "根据任务风险、成本和延迟选择不同模型。"],
+          ["自动化浏览器", "让 AI 在网页里点击、读取、填表和完成跨系统任务。"],
+          ["个人知识图谱", "把人的项目、关系、偏好和文件连接成可推理网络。"],
+          ["AI co-pilot", "在用户工作流旁边实时建议、补全和纠错。"],
+          ["生成式 UI", "根据任务动态生成控件、表格、图表和下一步操作。"]
+        ]
+      },
+      workflow: {
+        label: "真实业务场景",
+        items: [
+          ["会议后遗症", "会后信息散落在录音、聊天、白板和个人记忆里。"],
+          ["销售跟进", "每个客户都需要不同节奏的提醒、材料和下一句话。"],
+          ["客服升级", "普通问题需要自动解决，复杂问题需要带上下文转人工。"],
+          ["招聘筛选", "简历、作品、面试记录和团队偏好需要一起判断。"],
+          ["投研速读", "公告、新闻、电话会和财报需要变成可追踪假设。"],
+          ["合规审阅", "文档、邮件和流程需要被持续检查风险点。"],
+          ["创作者选题", "热点、受众反馈和库存素材需要组合成可拍内容。"],
+          ["小团队排期", "需求、bug、人的精力和截止日期总是在互相打架。"],
+          ["用户访谈", "原始访谈需要被整理成洞察、证据和产品机会。"],
+          ["采购比价", "供应商、规格、邮件报价和历史订单需要统一比较。"],
+          ["个人健康记录", "报告、习惯、症状和医生建议需要长期追踪。"],
+          ["跨境本地化", "文案、法规、货币、文化禁忌和客服话术需要同步调整。"]
+        ]
+      },
+      interface: {
+        label: "界面 / 技术形态",
+        items: [
+          ["收件箱界面", "所有待处理对象都以可清空、可归档、可升级的方式进入一个入口。"],
+          ["时间线", "把事件按发生顺序堆叠，允许回放、定位和追责。"],
+          ["地图视图", "把抽象关系变成可移动、可缩放、可导航的空间。"],
+          ["仪表盘", "用少数关键指标显示系统健康度和异常。"],
+          ["命令面板", "让用户用少量文字触发复杂操作。"],
+          ["卡片流", "把复杂任务拆成可滑动、可保存、可丢弃的小块。"],
+          ["沙盒模拟", "让用户先在安全环境里试错，再应用到真实系统。"],
+          ["差异视图", "把版本、选择、方案之间的变化高亮出来。"],
+          ["雷达图", "把多维状态压成一眼能扫的形状。"],
+          ["可视化管线", "让用户看到输入如何经过模型、规则和工具变成输出。"],
+          ["桌面小组件", "把高频状态留在视野边缘，不打断工作。"],
+          ["协作白板", "多人围绕对象拖拽、批注、聚类和投票。"]
+        ]
+      },
+      weird: {
+        label: "越界创意来源",
+        items: [
+          ["菜市场喊价", "高噪声环境里仍然能快速形成价格、信任和成交。"],
+          ["午夜电台", "亲密、低照度、只对少数人说话的陪伴感。"],
+          ["占星盘", "把复杂变量变成一张可讨论的象征地图。"],
+          ["密室逃脱", "用线索、锁和倒计时制造协作压力。"],
+          ["弹幕", "让旁观者的即时反应成为内容的一部分。"],
+          ["冰箱贴", "低成本、可移动、贴在生活现场的提醒物。"],
+          ["盲盒开箱", "把可控随机和收藏欲放进同一个动作。"],
+          ["机场失物招领", "为丢失、错放、无主的信息寻找主人。"],
+          ["寺庙功德箱", "把微小贡献包装成仪式和归属感。"],
+          ["游戏存档点", "允许人在复杂任务里保存状态、回滚和重开。"],
+          ["垃圾分类", "把混乱输入强制分桶，并让错误分类变得可见。"],
+          ["地下乐队排练", "粗糙、即时、强反馈，小范围快速成型。"]
+        ]
+      }
+    };
 
     const modeCopy = {
       tool: ["工作流小工具", "把一个烦人的重复动作变成一键完成"],
@@ -573,35 +626,22 @@
       return chars.slice(0, 8);
     }
 
-    async function fetchWikiEntry(signal) {
-      const response = await fetch("https://zh.wikipedia.org/api/rest_v1/page/random/summary", {
-        headers: { "accept": "application/json" },
-        signal
-      });
-      if (!response.ok) throw new Error("wiki request failed");
-      const data = await response.json();
-      return {
-        title: data.title || data.displaytitle || "未知词条",
-        extract: data.extract || "这个词条像一块还没被解释的随机碎片。",
-        url: data.content_urls?.desktop?.page || data.content_urls?.mobile?.page || ""
-      };
-    }
-
-    async function lexiconFromCats(raw) {
+    function lexiconFromCats(raw) {
       const chars = sourceChars(raw);
-      return Promise.all(chars.map(async (char, index) => {
-        const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 1100);
-        try {
-          const wiki = await fetchWikiEntry(controller.signal);
-          return { char, ...wiki, source: "Wikipedia" };
-        } catch (error) {
-          const fallback = fallbackLexicon[(seedFrom(`${raw}:${char}:${index}`)) % fallbackLexicon.length];
-          return { char, title: fallback[0], extract: fallback[1], url: "", source: "本地词库" };
-        } finally {
-          window.clearTimeout(timeout);
-        }
-      }));
+      const deckKeys = ["ai", "workflow", "interface", "weird"];
+      return chars.map((char, index) => {
+        const deckKey = deckKeys[(seedFrom(`${raw}:${char}:${index}`) + index) % deckKeys.length];
+        const deck = lexiconDecks[deckKey];
+        const item = deck.items[(seedFrom(`${char}:${raw}:${deckKey}:${index}`)) % deck.items.length];
+        return {
+          char,
+          title: item[0],
+          extract: item[1],
+          url: "",
+          source: deck.label,
+          deck: deckKey
+        };
+      });
     }
 
     const POETIC_AGENT_PROMPT = [
@@ -621,12 +661,14 @@
 
     function entrySignal(entry) {
       const text = `${entry.title} ${entry.extract}`;
-      let score = 45;
-      if (entry.source === "Wikipedia") score += 10;
+      let score = 58;
+      if (entry.deck === "ai" || entry.deck === "workflow") score += 18;
+      if (entry.deck === "interface") score += 10;
+      if (entry.deck === "weird") score -= 8;
       if (entry.extract.length > 40) score += 10;
       if (entry.extract.length > 100) score += 8;
       if (/列表|消歧义|模板|小作品|位于|市镇|人口|行政区|公路|车站/.test(text)) score -= 26;
-      if (/是一?个|是一?种|系统|方法|理论|行为|关系|心理|工具|网络|记录|组织|协作|预测|感知/.test(text)) score += 12;
+      if (/系统|方法|理论|行为|关系|心理|工具|网络|记录|组织|协作|预测|感知|用户|任务|流程|模型|数据|风险|自动/.test(text)) score += 12;
       return Math.max(0, Math.min(100, score));
     }
 
@@ -673,10 +715,10 @@
       const motif = pick(poem.motifs, seed, 1);
       const productName = pick([
         "Brief Distiller",
-        "概念堆肥机",
+        "MVP Forge",
         "Nonsense-to-MVP",
         "Idea Triage Desk",
-        "需求梦话清洗器",
+        "Signal Canvas",
         "Vibe Foundry"
       ], seed, 2);
       const users = pick([
@@ -726,8 +768,8 @@
 
       return {
         prompt: MAKE_SENSE_AGENT_PROMPT,
-        title: `${productName}: ${motif}产品破题器`,
-        pitch: `一个${category}方向的 AI 产品原型。它不迷信随机词条，而是把「${anchors}」这类碎片先交给诗意 Agent 发酵，再由 Make Sense Agent 收敛成真实用户问题：${categoryPromise}。`,
+        title: `${productName}: AI 产品破题工作台`,
+        pitch: `一个${category}方向的 AI 产品原型。它不迷信随机词条，而是把「${anchors}」这类碎片先交给诗意 Agent 发酵，再由 Make Sense Agent 收敛成真实用户问题：${categoryPromise}。本轮保留下来的诗意意象是「${motif}」，但它只作为创意调味，不进入产品需求本体。`,
         users,
         problem,
         coreLoop,

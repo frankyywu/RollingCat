@@ -1,0 +1,1818 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>喵机妙算 Meowracle Machine</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f7f0df;
+      --muted: #c6baa3;
+      --soft: rgba(247, 240, 223, 0.72);
+      --panel: rgba(18, 22, 25, 0.82);
+      --panel-strong: rgba(12, 15, 17, 0.94);
+      --line: rgba(247, 240, 223, 0.16);
+      --teal: #39d8ce;
+      --teal-deep: #0d9488;
+      --amber: #f3b45d;
+      --red: #e4635d;
+      --green: #8fd17c;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(120deg, rgba(5, 8, 10, 0.74), rgba(5, 8, 10, 0.4)),
+        radial-gradient(circle at 20% 10%, rgba(57, 216, 206, 0.18), transparent 32rem),
+        linear-gradient(140deg, #090b0d 0%, #12110f 43%, #06201e 100%);
+      overflow-x: hidden;
+    }
+
+    button,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.07);
+      min-height: 40px;
+      padding: 0 14px;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    button:hover {
+      border-color: rgba(57, 216, 206, 0.48);
+      background: rgba(57, 216, 206, 0.13);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      position: relative;
+    }
+
+    .app::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 82%);
+    }
+
+    .topbar {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px clamp(16px, 4vw, 48px);
+      border-bottom: 1px solid var(--line);
+      background: rgba(5, 7, 8, 0.62);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius);
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(57, 216, 206, 0.24), rgba(243, 180, 93, 0.18));
+      border: 1px solid rgba(247, 240, 223, 0.2);
+      box-shadow: inset 0 0 20px rgba(57, 216, 206, 0.14);
+      flex: 0 0 auto;
+    }
+
+    .paw {
+      width: 23px;
+      height: 22px;
+      position: relative;
+      transform: rotate(-12deg);
+    }
+
+    .paw span,
+    .paw::before,
+    .paw::after {
+      content: "";
+      position: absolute;
+      background: var(--teal);
+      box-shadow: 0 0 12px rgba(57, 216, 206, 0.7);
+    }
+
+    .paw span {
+      width: 13px;
+      height: 10px;
+      border-radius: 50% 50% 45% 45%;
+      left: 5px;
+      bottom: 1px;
+    }
+
+    .paw::before {
+      width: 6px;
+      height: 8px;
+      border-radius: 50%;
+      left: 1px;
+      top: 4px;
+      box-shadow: 8px -3px 0 var(--teal), 17px 0 0 var(--teal), 0 0 12px rgba(57, 216, 206, 0.7);
+    }
+
+    .paw::after {
+      width: 6px;
+      height: 8px;
+      border-radius: 50%;
+      left: 10px;
+      top: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.2rem, 2vw, 1.65rem);
+      line-height: 1.1;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .brand small {
+      color: var(--muted);
+      display: block;
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .combo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--soft);
+      font-size: 0.92rem;
+      white-space: nowrap;
+    }
+
+    kbd {
+      min-width: 32px;
+      height: 30px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0 9px;
+      border-radius: 6px;
+      border: 1px solid rgba(247, 240, 223, 0.22);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28);
+      color: var(--ink);
+      font-size: 0.84rem;
+    }
+
+    main {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: clamp(16px, 3vw, 36px);
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(340px, 0.72fr);
+      gap: clamp(18px, 3vw, 32px);
+      align-items: stretch;
+    }
+
+    .oracle-stage {
+      min-height: calc(100vh - 144px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+    }
+
+    .stage-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: end;
+    }
+
+    .title-block h2 {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 5rem);
+      line-height: 0.95;
+      letter-spacing: 0;
+      max-width: 12ch;
+    }
+
+    .title-block p {
+      max-width: 58ch;
+      color: var(--muted);
+      margin: 14px 0 0;
+      line-height: 1.65;
+    }
+
+    .cat-window {
+      align-self: stretch;
+      min-width: 180px;
+      height: min(22vw, 180px);
+      border: 1px solid rgba(247, 240, 223, 0.14);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(57, 216, 206, 0.18), transparent 45%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cat-window::before {
+      content: "";
+      position: absolute;
+      inset: 18px 20px auto auto;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: 1px solid rgba(57, 216, 206, 0.42);
+      box-shadow: 0 0 28px rgba(57, 216, 206, 0.24), inset 0 0 18px rgba(57, 216, 206, 0.18);
+    }
+
+    .cat-sigil {
+      position: absolute;
+      left: 22px;
+      bottom: 18px;
+      width: 132px;
+      height: 86px;
+    }
+
+    .cat-head {
+      position: absolute;
+      left: 22px;
+      top: 0;
+      width: 88px;
+      height: 70px;
+      border-radius: 45% 45% 42% 42%;
+      background: linear-gradient(145deg, #3a342c, #15181b);
+      border: 1px solid rgba(247, 240, 223, 0.18);
+      box-shadow: inset 0 8px 14px rgba(255, 255, 255, 0.08);
+    }
+
+    .cat-head::before,
+    .cat-head::after {
+      content: "";
+      position: absolute;
+      top: -17px;
+      width: 35px;
+      height: 38px;
+      background: linear-gradient(135deg, #3d372f, #14181a);
+      border: 1px solid rgba(247, 240, 223, 0.16);
+      clip-path: polygon(50% 0, 0 100%, 100% 100%);
+    }
+
+    .cat-head::before {
+      left: 7px;
+      transform: rotate(-16deg);
+    }
+
+    .cat-head::after {
+      right: 7px;
+      transform: rotate(16deg);
+    }
+
+    .cat-eye {
+      position: absolute;
+      top: 31px;
+      width: 13px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 16px rgba(57, 216, 206, 0.8);
+    }
+
+    .cat-eye.left {
+      left: 25px;
+    }
+
+    .cat-eye.right {
+      right: 25px;
+    }
+
+    .keyboard {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 132px;
+      height: 28px;
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 3px;
+      transform: perspective(120px) rotateX(18deg);
+    }
+
+    .keyboard i {
+      display: block;
+      border-radius: 3px;
+      background: rgba(247, 240, 223, 0.16);
+      border: 1px solid rgba(247, 240, 223, 0.12);
+    }
+
+    .keyboard i:nth-child(3n) {
+      background: rgba(57, 216, 206, 0.32);
+      box-shadow: 0 0 10px rgba(57, 216, 206, 0.35);
+    }
+
+    .input-shell {
+      min-height: 420px;
+      display: grid;
+      grid-template-rows: auto minmax(260px, 1fr) auto;
+      border: 1px solid rgba(247, 240, 223, 0.16);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(18, 22, 25, 0.92), rgba(9, 11, 13, 0.86));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .input-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      flex-wrap: wrap;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--soft);
+      min-width: 0;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(143, 209, 124, 0.86);
+      flex: 0 0 auto;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    select {
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      min-height: 40px;
+      padding: 0 12px;
+      outline: none;
+    }
+
+    textarea {
+      width: 100%;
+      min-width: 0;
+      height: 100%;
+      resize: none;
+      padding: clamp(18px, 3vw, 28px);
+      border: 0;
+      outline: none;
+      color: #fff8e7;
+      background:
+        linear-gradient(transparent 31px, rgba(247, 240, 223, 0.055) 32px),
+        rgba(0, 0, 0, 0.1);
+      background-size: 100% 32px;
+      caret-color: var(--amber);
+      font-family: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+      font-size: clamp(1.35rem, 3.4vw, 3rem);
+      line-height: 1.18;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    textarea::placeholder {
+      color: rgba(247, 240, 223, 0.35);
+    }
+
+    .input-footer {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--line);
+    }
+
+    .metric {
+      padding: 14px 16px;
+      border-right: 1px solid var(--line);
+      min-width: 0;
+    }
+
+    .metric:last-child {
+      border-right: 0;
+    }
+
+    .metric b {
+      display: block;
+      font-size: clamp(1.15rem, 2vw, 1.6rem);
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 6px;
+      white-space: nowrap;
+    }
+
+    .hint-strip {
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .hint-strip strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    .oracle-panel {
+      min-height: calc(100vh - 144px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      position: sticky;
+      top: 104px;
+      align-self: start;
+    }
+
+    .panel-card,
+    .history {
+      border-radius: var(--radius);
+      border: 1px solid rgba(247, 240, 223, 0.16);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .panel-head h3 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .temper {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(243, 180, 93, 0.16);
+      color: #ffe0ae;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .reading {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .empty {
+      color: var(--muted);
+      min-height: 360px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      line-height: 1.7;
+      padding: 28px;
+    }
+
+    .oracle-raw {
+      font-family: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+      color: #dffdfa;
+      border: 1px dashed rgba(57, 216, 206, 0.34);
+      background: rgba(57, 216, 206, 0.08);
+      border-radius: var(--radius);
+      padding: 12px;
+      overflow-wrap: anywhere;
+      max-height: 120px;
+      overflow: auto;
+    }
+
+    .reading h4 {
+      margin: 0 0 8px;
+      color: #ffe7bd;
+      font-size: 0.9rem;
+      letter-spacing: 0;
+    }
+
+    .reading p {
+      margin: 0;
+      color: var(--soft);
+      line-height: 1.7;
+    }
+
+    .keyword-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(247, 240, 223, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--ink);
+      font-size: 0.86rem;
+    }
+
+    .scale-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .scale {
+      display: grid;
+      grid-template-columns: 88px 1fr 44px;
+      gap: 10px;
+      align-items: center;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .bar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
+      overflow: hidden;
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      width: var(--value);
+      background: linear-gradient(90deg, var(--teal), var(--amber));
+      border-radius: inherit;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px;
+      border-top: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, rgba(57, 216, 206, 0.36), rgba(243, 180, 93, 0.24));
+      border-color: rgba(57, 216, 206, 0.44);
+      font-weight: 700;
+    }
+
+    .danger:hover {
+      border-color: rgba(228, 99, 93, 0.52);
+      background: rgba(228, 99, 93, 0.14);
+    }
+
+    .history {
+      min-height: 160px;
+      max-height: 230px;
+    }
+
+    .history-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 172px;
+      overflow: auto;
+    }
+
+    .history-list li {
+      padding: 12px 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      display: grid;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .history-list li:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--ink);
+    }
+
+    .history-list b {
+      color: var(--ink);
+      font-size: 0.88rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-list span {
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      translate: -50% 20px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(57, 216, 206, 0.42);
+      background: var(--panel-strong);
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      transition: opacity 180ms ease, translate 180ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      translate: -50% 0;
+    }
+
+    @media (max-width: 1020px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .oracle-panel {
+        min-height: auto;
+        position: static;
+      }
+
+      .stage-header {
+        grid-template-columns: 1fr;
+      }
+
+      .cat-window {
+        height: 160px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .combo {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+
+      .title-block h2 {
+        max-width: none;
+      }
+
+      .input-footer {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .metric:nth-child(2) {
+        border-right: 0;
+      }
+
+      .metric:nth-child(1),
+      .metric:nth-child(2) {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hint-strip {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Pixel cute skin */
+    :root {
+      color-scheme: light;
+      --ink: #332c38;
+      --muted: #756879;
+      --soft: #574f60;
+      --panel: #fff8e7;
+      --panel-strong: #fffdf5;
+      --line: #332c38;
+      --teal: #64b8a9;
+      --teal-deep: #347d74;
+      --amber: #f1b263;
+      --red: #d85f59;
+      --green: #81bd69;
+      --cream: #fff8e7;
+      --paper: #f6e7c8;
+      --sky: #b9e3dc;
+      --pink: #f5a6a6;
+      --shadow: 6px 6px 0 #332c38;
+      --radius: 0;
+      font-family: "Courier New", "SFMono-Regular", "Cascadia Code", "PingFang SC", "Microsoft YaHei", monospace;
+    }
+
+    body {
+      color: var(--ink);
+      background:
+        linear-gradient(45deg, rgba(51, 44, 56, 0.04) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(51, 44, 56, 0.04) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(51, 44, 56, 0.04) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(51, 44, 56, 0.04) 75%),
+        #f7edda;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+      background-size: 24px 24px;
+    }
+
+    .app::before {
+      display: none;
+    }
+
+    button,
+    select,
+    kbd {
+      border: 2px solid var(--line);
+      border-radius: 0;
+      background: var(--cream);
+      color: var(--ink);
+      box-shadow: 3px 3px 0 var(--line);
+    }
+
+    button {
+      min-height: 38px;
+      padding: 0 12px;
+      font-weight: 700;
+      transition: translate 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+
+    button:hover {
+      border-color: var(--line);
+      background: #ffe6a8;
+      transform: none;
+      translate: -1px -1px;
+      box-shadow: 4px 4px 0 var(--line);
+    }
+
+    button:active {
+      translate: 3px 3px;
+      box-shadow: 0 0 0 var(--line);
+    }
+
+    .topbar {
+      position: static;
+      min-height: 64px;
+      margin: 14px clamp(12px, 2.5vw, 28px) 0;
+      padding: 12px 16px;
+      border: 3px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: none;
+    }
+
+    .mark {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--line);
+      border-radius: 0;
+      background: #ffdca8;
+      box-shadow: 3px 3px 0 var(--line);
+    }
+
+    .paw,
+    .paw span,
+    .paw::before,
+    .paw::after {
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .paw span,
+    .paw::before,
+    .paw::after {
+      background: var(--ink);
+    }
+
+    h1 {
+      font-size: clamp(1.05rem, 1.8vw, 1.45rem);
+    }
+
+    .brand small,
+    .combo {
+      color: var(--muted);
+    }
+
+    kbd {
+      min-width: 30px;
+      height: 28px;
+      padding: 0 8px;
+      background: #e5f5ef;
+      box-shadow: 2px 2px 0 var(--line);
+    }
+
+    main {
+      width: min(1200px, 100%);
+      padding: clamp(14px, 2.5vw, 28px);
+      grid-template-columns: minmax(0, 1fr) minmax(330px, 0.78fr);
+      gap: clamp(18px, 2.6vw, 28px);
+    }
+
+    .oracle-stage,
+    .oracle-panel {
+      min-height: auto;
+    }
+
+    .oracle-panel {
+      top: 20px;
+    }
+
+    .stage-header {
+      align-items: center;
+      grid-template-columns: minmax(0, 1fr) 170px;
+    }
+
+    .title-block h2 {
+      font-size: clamp(1.7rem, 4vw, 3.15rem);
+      line-height: 1.12;
+      max-width: 16ch;
+      text-wrap: balance;
+      text-shadow: 3px 3px 0 #ffdca8;
+    }
+
+    .title-block p {
+      max-width: 54ch;
+      color: var(--soft);
+      margin-top: 10px;
+      line-height: 1.7;
+      font-size: 0.95rem;
+    }
+
+    .cat-window {
+      min-width: 150px;
+      width: 170px;
+      height: 150px;
+      border: 3px solid var(--line);
+      background:
+        linear-gradient(#bde7df 0 58%, #8fca98 58% 100%);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      image-rendering: pixelated;
+    }
+
+    .cat-window::before {
+      inset: 16px 18px auto auto;
+      width: 26px;
+      height: 26px;
+      border: 0;
+      border-radius: 0;
+      background: #ffe6a8;
+      box-shadow:
+        0 0 0 3px var(--line),
+        -9px 0 0 #ffe6a8,
+        9px 0 0 #ffe6a8,
+        0 -9px 0 #ffe6a8,
+        0 9px 0 #ffe6a8;
+    }
+
+    .cat-sigil {
+      left: 19px;
+      bottom: 18px;
+      width: 132px;
+      height: 104px;
+    }
+
+    .cat-sigil::before,
+    .cat-sigil::after {
+      content: "";
+      position: absolute;
+      top: 45px;
+      width: 8px;
+      height: 8px;
+      background: var(--pink);
+      box-shadow: 0 0 0 2px var(--line);
+      z-index: 3;
+    }
+
+    .cat-sigil::before {
+      left: 42px;
+    }
+
+    .cat-sigil::after {
+      right: 42px;
+    }
+
+    .cat-head {
+      left: 31px;
+      top: 4px;
+      width: 74px;
+      height: 62px;
+      border: 3px solid var(--line);
+      border-radius: 0;
+      background: #6f626d;
+      box-shadow:
+        inset 0 -12px 0 rgba(51, 44, 56, 0.18),
+        0 18px 0 -3px #6f626d,
+        0 18px 0 0 var(--line);
+    }
+
+    .cat-head::before,
+    .cat-head::after {
+      top: -20px;
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--line);
+      background: #6f626d;
+      clip-path: none;
+    }
+
+    .cat-head::before {
+      left: 4px;
+      transform: none;
+      border-right: 0;
+      border-bottom: 0;
+    }
+
+    .cat-head::after {
+      right: 4px;
+      transform: none;
+      border-left: 0;
+      border-bottom: 0;
+    }
+
+    .cat-eye {
+      top: 27px;
+      width: 10px;
+      height: 10px;
+      border-radius: 0;
+      background: #fff8e7;
+      box-shadow: 0 0 0 2px var(--line);
+    }
+
+    .cat-eye.left {
+      left: 18px;
+    }
+
+    .cat-eye.right {
+      right: 18px;
+    }
+
+    .cat-head .cat-eye.left::after,
+    .cat-head .cat-eye.right::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 4px;
+      height: 4px;
+      background: var(--ink);
+    }
+
+    .cat-head i.right::before {
+      content: "";
+      position: absolute;
+      left: -20px;
+      top: 18px;
+      width: 6px;
+      height: 6px;
+      background: var(--ink);
+      box-shadow:
+        6px 4px 0 var(--ink),
+        12px 0 0 var(--ink);
+    }
+
+    .keyboard {
+      left: 3px;
+      bottom: 0;
+      width: 126px;
+      height: 30px;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 3px;
+      transform: none;
+      z-index: 2;
+    }
+
+    .keyboard i {
+      border: 2px solid var(--line);
+      border-radius: 0;
+      background: #fff8e7;
+    }
+
+    .keyboard i:nth-child(3n) {
+      background: #ffdca8;
+      box-shadow: none;
+    }
+
+    .input-shell,
+    .panel-card,
+    .history {
+      border: 3px solid var(--line);
+      border-radius: 0;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .input-shell {
+      min-height: 390px;
+      grid-template-rows: auto minmax(230px, 1fr) auto;
+    }
+
+    .input-toolbar,
+    .panel-head,
+    .actions {
+      border-color: var(--line);
+      background: #f6e7c8;
+    }
+
+    .status {
+      color: var(--soft);
+      font-weight: 700;
+    }
+
+    .live-dot {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--line);
+      border-radius: 0;
+      background: var(--green);
+      box-shadow: none;
+    }
+
+    select {
+      min-height: 38px;
+      outline: none;
+    }
+
+    textarea {
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(51, 44, 56, 0.06) 1px, transparent 1px),
+        linear-gradient(rgba(51, 44, 56, 0.06) 1px, transparent 1px),
+        #fffdf5;
+      background-size: 20px 20px;
+      caret-color: var(--red);
+      font-size: clamp(1.25rem, 3vw, 2.35rem);
+      line-height: 1.22;
+      padding: clamp(16px, 2.5vw, 24px);
+    }
+
+    textarea::placeholder {
+      color: #a5989a;
+    }
+
+    .input-footer {
+      border-top: 3px solid var(--line);
+      background: #fff8e7;
+    }
+
+    .metric {
+      border-right: 3px solid var(--line);
+      padding: 12px 14px;
+    }
+
+    .metric b {
+      color: var(--ink);
+    }
+
+    .metric span,
+    .hint-strip {
+      color: var(--muted);
+    }
+
+    .hint-strip {
+      padding: 0 2px;
+      font-size: 0.88rem;
+    }
+
+    .panel-head {
+      border-bottom: 3px solid var(--line);
+      padding: 12px 14px;
+    }
+
+    .temper,
+    .chip {
+      min-height: 28px;
+      border: 2px solid var(--line);
+      border-radius: 0;
+      background: #ffdca8;
+      color: var(--ink);
+      font-weight: 700;
+      box-shadow: 2px 2px 0 var(--line);
+    }
+
+    .reading {
+      gap: 14px;
+      padding: 16px;
+      background: #fffdf5;
+    }
+
+    .empty {
+      min-height: 330px;
+      color: var(--soft);
+      background: #fffdf5;
+    }
+
+    .oracle-raw {
+      color: var(--ink);
+      border: 2px dashed var(--line);
+      border-radius: 0;
+      background: #e5f5ef;
+      max-height: 110px;
+    }
+
+    .reading h4 {
+      color: var(--teal-deep);
+      font-size: 0.88rem;
+    }
+
+    .reading p {
+      color: var(--soft);
+      line-height: 1.65;
+    }
+
+    .bar {
+      height: 12px;
+      border: 2px solid var(--line);
+      border-radius: 0;
+      background: #fff8e7;
+    }
+
+    .bar i {
+      background: repeating-linear-gradient(
+        90deg,
+        var(--teal) 0 8px,
+        #8fd0c5 8px 10px
+      );
+      border-radius: 0;
+    }
+
+    .actions {
+      border-top: 3px solid var(--line);
+    }
+
+    .danger:hover {
+      border-color: var(--line);
+      background: #ffc2bd;
+    }
+
+    .history-list li {
+      border-top: 3px solid var(--line);
+      color: var(--muted);
+      background: #fffdf5;
+    }
+
+    .history-list li:hover {
+      background: #e5f5ef;
+      color: var(--ink);
+    }
+
+    .toast {
+      border: 3px solid var(--line);
+      border-radius: 0;
+      background: var(--panel-strong);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 1020px) {
+      .stage-header {
+        grid-template-columns: 1fr;
+      }
+
+      .cat-window {
+        width: 170px;
+        height: 150px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .topbar {
+        margin: 10px 10px 0;
+      }
+
+      main {
+        padding: 14px 10px 20px;
+      }
+
+      .title-block h2 {
+        max-width: none;
+        font-size: clamp(1.55rem, 9vw, 2.4rem);
+      }
+
+      .metric {
+        border-right-width: 3px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"><div class="paw"><span></span></div></div>
+        <div>
+          <h1>喵机妙算</h1>
+          <small>Meowracle Machine</small>
+        </div>
+      </div>
+      <div class="combo" aria-label="提交快捷键">
+        <span>猫滚完以后，人类按</span>
+        <kbd id="modKey">⌘</kbd>
+        <span>+</span>
+        <kbd>Enter</kbd>
+        <span>触发解读</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="oracle-stage" aria-labelledby="pageTitle">
+        <div class="stage-header">
+          <div class="title-block">
+            <h2 id="pageTitle">让猫踩出乱码，让 AI 解释命运。</h2>
+            <p>邀请猫神自由路过键盘、踩一下、蹭一下、尾巴扫一下。页面会接住所有猫语，但只有人类组合键才能提交。</p>
+          </div>
+          <div class="cat-window" aria-hidden="true">
+            <div class="cat-sigil">
+              <div class="cat-head">
+                <i class="cat-eye left"></i>
+                <i class="cat-eye right"></i>
+              </div>
+              <div class="keyboard">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-shell">
+          <div class="input-toolbar">
+            <div class="status">
+              <i class="live-dot" aria-hidden="true"></i>
+              <span id="focusState">猫语接收中</span>
+            </div>
+            <div class="controls">
+              <select id="persona" aria-label="猫神人格">
+                <option value="void">阴湿黑猫神</option>
+                <option value="orange">暴躁橘猫神</option>
+                <option value="ragdoll">冷淡布偶神</option>
+                <option value="cyber">赛博三花神</option>
+                <option value="worker">加班狸花神</option>
+              </select>
+              <button id="fakeCat" type="button">模拟猫神</button>
+              <button id="clearBtn" class="danger" type="button">清空</button>
+            </div>
+          </div>
+
+          <textarea id="catInput" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="把光标留在这里。猫神经过时，键盘会自己显灵。"></textarea>
+
+          <div class="input-footer" aria-label="猫语指标">
+            <div class="metric">
+              <b id="charCount">0</b>
+              <span>神谕字符</span>
+            </div>
+            <div class="metric">
+              <b id="chaosScore">0%</b>
+              <span>混乱浓度</span>
+            </div>
+            <div class="metric">
+              <b id="repeatScore">0</b>
+              <span>最长连按</span>
+            </div>
+            <div class="metric">
+              <b id="symbolScore">0%</b>
+              <span>符号占比</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hint-strip">
+          <span><strong>现场模式：</strong>把电脑放稳，输入框保持聚焦，让猫自由通过键盘。</span>
+          <span>屏幕会保留原始猫谕，方便投影和截图。</span>
+        </div>
+      </section>
+
+      <aside class="oracle-panel" aria-label="猫神解读">
+        <section class="panel-card">
+          <div class="panel-head">
+            <h3>每日猫谕卡</h3>
+            <span class="temper" id="temper">等待猫神落座</span>
+          </div>
+          <div id="reading" class="empty">还没有收到猫谕。<br>让猫先对键盘表达一点意见。</div>
+          <div class="actions">
+            <button id="copyBtn" type="button">复制文本</button>
+            <button id="downloadBtn" type="button">下载卡片</button>
+          </div>
+        </section>
+
+        <section class="history">
+          <div class="panel-head">
+            <h3>最近神谕</h3>
+            <span class="temper" id="historyCount">0 条</span>
+          </div>
+          <ul class="history-list" id="historyList"></ul>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const input = document.querySelector("#catInput");
+    const readingNode = document.querySelector("#reading");
+    const persona = document.querySelector("#persona");
+    const modKey = document.querySelector("#modKey");
+    const focusState = document.querySelector("#focusState");
+    const toast = document.querySelector("#toast");
+    const historyList = document.querySelector("#historyList");
+    const historyCount = document.querySelector("#historyCount");
+    const temper = document.querySelector("#temper");
+    const charCount = document.querySelector("#charCount");
+    const chaosScore = document.querySelector("#chaosScore");
+    const repeatScore = document.querySelector("#repeatScore");
+    const symbolScore = document.querySelector("#symbolScore");
+
+    const state = {
+      currentReading: null,
+      history: []
+    };
+
+    const personaCopy = {
+      void: {
+        name: "阴湿黑猫神",
+        tone: "猫神今天坐在路由器阴影里，语气像一封没有发送的邮件。",
+        verbs: ["潜伏", "回避", "冷处理", "把灯调暗"],
+        judgment: "你今天看起来像一个把情绪最小化到系统托盘的人。"
+      },
+      orange: {
+        name: "暴躁橘猫神",
+        tone: "猫神刚把水杯推下桌，对你的命运表示基本满意但不想承认。",
+        verbs: ["冲锋", "打断", "先吃", "别解释"],
+        judgment: "你今天的能量像一袋刚拆封的薯片，响亮，但容易碎。"
+      },
+      ragdoll: {
+        name: "冷淡布偶神",
+        tone: "猫神用非常礼貌的距离感宣布：它已经知道了，但并不急着告诉你。",
+        verbs: ["等待", "观察", "轻轻拒绝", "把话说半句"],
+        judgment: "你今天适合保持漂亮的沉默，并在必要时假装没看见。"
+      },
+      cyber: {
+        name: "赛博三花神",
+        tone: "猫神正在上传爪印，命运缓存命中率异常升高。",
+        verbs: ["同步", "重启", "闪避", "备份"],
+        judgment: "你今天像一个没更新驱动的灵魂，但接口还很新。"
+      },
+      worker: {
+        name: "加班狸花神",
+        tone: "猫神盯着你的日历，发出了不属于哺乳动物的叹息。",
+        verbs: ["排期", "糊弄", "归档", "准点下班"],
+        judgment: "你今天很像一个被会议邀请复制粘贴过三次的人。"
+      }
+    };
+
+    const symbols = "`~!@#$%^&*()_+-=[]{}\\|;:'\",.<>/?";
+    const simulated = [
+      "]]]]ppppp0000---",
+      "m,,,m,,,////  88==",
+      "qazwsxedcrfv   ....;;",
+      "0000\\\\\\\\[[[p[p[p",
+      "nyyyhhh   --==++",
+      ";;;;;/////kkk000",
+      "l000l000l000[[[]",
+      "meowwww   404  ==="
+    ];
+
+    function seedFrom(text) {
+      let seed = 2166136261;
+      for (const char of text) {
+        seed ^= char.charCodeAt(0);
+        seed = Math.imul(seed, 16777619);
+      }
+      return seed >>> 0;
+    }
+
+    function pick(list, seed, offset = 0) {
+      return list[(seed + offset) % list.length];
+    }
+
+    function longestRun(text) {
+      let best = 0;
+      let current = 0;
+      let previous = "";
+      for (const char of text) {
+        current = char === previous ? current + 1 : 1;
+        previous = char;
+        best = Math.max(best, current);
+      }
+      return best;
+    }
+
+    function analyze(text) {
+      const trimmed = text.trim();
+      const length = trimmed.length;
+      const unique = new Set(trimmed).size;
+      const symbolCount = [...trimmed].filter((char) => symbols.includes(char)).length;
+      const digitCount = [...trimmed].filter((char) => /\d/.test(char)).length;
+      const letterCount = [...trimmed].filter((char) => /[a-z]/i.test(char)).length;
+      const spaceCount = [...trimmed].filter((char) => /\s/.test(char)).length;
+      const run = longestRun(trimmed);
+      const symbolRatio = length ? Math.round((symbolCount / length) * 100) : 0;
+      const chaos = length ? Math.min(99, Math.round((unique / Math.max(1, length)) * 72 + symbolRatio * 0.42 + Math.min(run, 12) * 1.8)) : 0;
+      return { trimmed, length, unique, symbolCount, digitCount, letterCount, spaceCount, run, symbolRatio, chaos };
+    }
+
+    function updateMetrics() {
+      const stats = analyze(input.value);
+      charCount.textContent = stats.length;
+      chaosScore.textContent = `${stats.chaos}%`;
+      repeatScore.textContent = stats.run;
+      symbolScore.textContent = `${stats.symbolRatio}%`;
+    }
+
+    function buildReading(text) {
+      const stats = analyze(text);
+      if (!stats.length) return null;
+
+      const seed = seedFrom(`${stats.trimmed}|${persona.value}|${new Date().toDateString()}`);
+      const cat = personaCopy[persona.value];
+      const closeEnergy = /[\]\)\}]/.test(stats.trimmed) ? "你正在把某些窗口关上，但其中一个窗口其实是你自己的耐心。" : "你还没有真正结束任何事，只是把它们拖到了桌面边缘。";
+      const zeroEnergy = stats.digitCount > 2 ? "数字反复出现，说明宇宙正在给你开空白发票，金额由你的睡眠质量决定。" : "数字很少，今日不宜把一切都量化。";
+      const repeatEnergy = stats.run >= 5 ? `最长 ${stats.run} 连按不是执念，是猫神把爪子暂时忘在了同一个现实里。` : "连按不长，说明猫神今天还有一点分寸，或者键盘太滑。";
+      const symbolEnergy = stats.symbolRatio > 38 ? "符号密度偏高，今天适合用标点表达复杂感情，少用长句。" : "符号密度温和，命运暂时没有进入报错模式。";
+
+      const keywords = [
+        pick(["结算", "延迟", "横着活", "重启", "拒绝内耗", "假装稳定"], seed, 1),
+        pick(["键盘圣痕", "空白支票", "毛茸茸变量", "静音通知", "反向预兆", "未读关系"], seed, 3),
+        pick(cat.verbs, seed, 5)
+      ];
+
+      const advicePool = [
+        "别回那封让你下意识皱眉的消息，至少先喝水。",
+        "今天适合把复杂对话缩短到三句话以内。",
+        "不要主动开启新的责任副本。",
+        "把一个小东西归位，命运会误以为你已经很有秩序。",
+        "先吃饭，再判断人生有没有意义。",
+        "适合承认自己累了，不适合解释自己为什么累。"
+      ];
+
+      const tabooPool = [
+        "相信老板说的“很快就好”",
+        "在深夜做重大购买决定",
+        "给不回消息的人写小作文",
+        "把暂时的情绪当永久结论",
+        "用清醒的人设硬撑困意",
+        "试图理解所有群聊"
+      ];
+
+      const luckyPool = [
+        "一根还没失踪的数据线",
+        "冰美式第一口",
+        "干净袜子",
+        "能关掉的通知",
+        "键盘右上角那颗没用过的键",
+        "猫没有推下桌的杯子"
+      ];
+
+      const trust = Math.max(7, Math.min(96, 100 - stats.chaos + stats.run * 3 + stats.digitCount));
+      const comfort = Math.max(34, Math.min(99, 61 + stats.symbolRatio + stats.spaceCount * 2));
+      const nonsense = Math.max(42, Math.min(99, stats.chaos + stats.unique));
+
+      return {
+        raw: stats.trimmed,
+        catName: cat.name,
+        temper: pick(["猫神半眯眼", "猫神不置可否", "猫神尾巴轻拍", "猫神正在加载", "猫神准许你焦虑三分钟"], seed, 7),
+        tone: cat.tone,
+        translation: `${closeEnergy} ${zeroEnergy} ${repeatEnergy} ${symbolEnergy}`,
+        advice: pick(advicePool, seed, 11),
+        taboo: pick(tabooPool, seed, 13),
+        lucky: pick(luckyPool, seed, 17),
+        judgment: cat.judgment,
+        warning: stats.letterCount > stats.symbolCount
+          ? "人类误读警告：你以为这是英文，其实猫只是踩到了你尚未处理的自尊。"
+          : "人类误读警告：你以为这是爱情预兆，其实猫可能只是踩到了退格附近。",
+        keywords,
+        scales: { trust, comfort, nonsense },
+        time: new Date().toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit", month: "2-digit", day: "2-digit" })
+      };
+    }
+
+    function renderReading(data) {
+      if (!data) return;
+      temper.textContent = data.temper;
+      readingNode.className = "reading";
+      readingNode.innerHTML = `
+        <div>
+          <h4>猫谕原文</h4>
+          <div class="oracle-raw"></div>
+        </div>
+        <div>
+          <h4>${data.catName}解读</h4>
+          <p>${data.tone}</p>
+          <p>${data.translation}</p>
+        </div>
+        <div>
+          <h4>今日关键词</h4>
+          <div class="keyword-row">${data.keywords.map((word) => `<span class="chip">${escapeHtml(word)}</span>`).join("")}</div>
+        </div>
+        <div>
+          <h4>猫神建议</h4>
+          <p>${data.advice}</p>
+        </div>
+        <div>
+          <h4>幸运物 / 今日忌</h4>
+          <p>幸运物：${data.lucky}</p>
+          <p>忌：${data.taboo}</p>
+        </div>
+        <div>
+          <h4>猫对你的评价</h4>
+          <p>${data.judgment}</p>
+        </div>
+        <div>
+          <h4>人类误读警告</h4>
+          <p>${data.warning}</p>
+        </div>
+        <div class="scale-grid">
+          ${scaleRow("神谕可信度", data.scales.trust)}
+          ${scaleRow("情绪安慰度", data.scales.comfort)}
+          ${scaleRow("胡说浓度", data.scales.nonsense)}
+        </div>
+      `;
+      readingNode.querySelector(".oracle-raw").textContent = data.raw;
+    }
+
+    function scaleRow(label, value) {
+      return `
+        <div class="scale">
+          <span>${label}</span>
+          <span class="bar" style="--value:${value}%"><i></i></span>
+          <span>${value}%</span>
+        </div>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#039;"
+      })[char]);
+    }
+
+    function submitOracle() {
+      const data = buildReading(input.value);
+      if (!data) {
+        showToast("猫神还没有留下足够的键盘痕迹");
+        input.focus();
+        return;
+      }
+      state.currentReading = data;
+      state.history.unshift(data);
+      state.history = state.history.slice(0, 6);
+      renderReading(data);
+      renderHistory();
+      showToast("猫神已经完成解释");
+    }
+
+    function renderHistory() {
+      historyCount.textContent = `${state.history.length} 条`;
+      historyList.innerHTML = state.history.map((item, index) => `
+        <li data-index="${index}">
+          <b>${escapeHtml(item.keywords.join(" / "))}</b>
+          <span>${escapeHtml(item.time)} · ${escapeHtml(item.raw.slice(0, 42))}</span>
+        </li>
+      `).join("");
+    }
+
+    function toShareText(data) {
+      return [
+        "喵机妙算 Meowracle Machine",
+        "",
+        `今日猫谕：${data.raw}`,
+        "",
+        `${data.catName}解读：${data.translation}`,
+        "",
+        `关键词：${data.keywords.join(" / ")}`,
+        `猫神建议：${data.advice}`,
+        `幸运物：${data.lucky}`,
+        `忌：${data.taboo}`,
+        data.warning
+      ].join("\n");
+    }
+
+    async function copyReading() {
+      if (!state.currentReading) {
+        showToast("还没有可复制的猫谕");
+        return;
+      }
+      await navigator.clipboard.writeText(toShareText(state.currentReading));
+      showToast("已复制今日猫谕");
+    }
+
+    function downloadCard() {
+      if (!state.currentReading) {
+        showToast("还没有可下载的猫谕");
+        return;
+      }
+      const data = state.currentReading;
+      const canvas = document.createElement("canvas");
+      const width = 1200;
+      const height = 1500;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, "#0a1012");
+      gradient.addColorStop(0.52, "#15110d");
+      gradient.addColorStop(1, "#062522");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "rgba(247,240,223,0.22)";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(54, 54, width - 108, height - 108);
+
+      ctx.fillStyle = "#39d8ce";
+      ctx.font = "700 44px sans-serif";
+      ctx.fillText("喵机妙算", 92, 130);
+      ctx.fillStyle = "#c6baa3";
+      ctx.font = "28px sans-serif";
+      ctx.fillText("Meowracle Machine", 92, 172);
+
+      ctx.fillStyle = "#f7f0df";
+      ctx.font = "700 58px sans-serif";
+      wrapCanvasText(ctx, "今日猫谕卡", 92, 270, 980, 70);
+
+      drawBlock(ctx, "猫谕原文", data.raw, 92, 370, 1016);
+      drawBlock(ctx, `${data.catName}解读`, data.translation, 92, 610, 1016);
+      drawBlock(ctx, "猫神建议", data.advice, 92, 840, 1016);
+      drawBlock(ctx, "幸运物 / 今日忌", `幸运物：${data.lucky}\n忌：${data.taboo}`, 92, 1010, 1016);
+      drawBlock(ctx, "人类误读警告", data.warning, 92, 1210, 1016);
+
+      ctx.fillStyle = "#ffe0ae";
+      ctx.font = "30px sans-serif";
+      ctx.fillText(`关键词：${data.keywords.join(" / ")}`, 92, 1400);
+
+      const link = document.createElement("a");
+      link.download = `meowracle-${Date.now()}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      showToast("猫谕卡片已生成");
+    }
+
+    function drawBlock(ctx, title, body, x, y, maxWidth) {
+      ctx.fillStyle = "#ffe0ae";
+      ctx.font = "700 30px sans-serif";
+      ctx.fillText(title, x, y);
+      ctx.fillStyle = "rgba(247,240,223,0.84)";
+      ctx.font = "30px sans-serif";
+      wrapCanvasText(ctx, body, x, y + 48, maxWidth, 42);
+    }
+
+    function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+      const paragraphs = String(text).split("\n");
+      let cursorY = y;
+      for (const paragraph of paragraphs) {
+        let line = "";
+        for (const char of paragraph) {
+          const nextLine = line + char;
+          if (ctx.measureText(nextLine).width > maxWidth && line) {
+            ctx.fillText(line, x, cursorY);
+            line = char;
+            cursorY += lineHeight;
+          } else {
+            line = nextLine;
+          }
+        }
+        ctx.fillText(line, x, cursorY);
+        cursorY += lineHeight;
+      }
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function simulateCat() {
+      const seed = Date.now() + input.value.length;
+      const base = pick(simulated, seed);
+      const extraLength = 8 + (seed % 24);
+      let extra = "";
+      const catKeys = "pppp[[[[]]]]0000----;;;;////mmmmnnnyyyhhuu  ";
+      for (let index = 0; index < extraLength; index += 1) {
+        extra += catKeys[(seed + index * 7) % catKeys.length];
+      }
+      input.value = `${input.value}${input.value ? "\n" : ""}${base}${extra}`;
+      input.focus();
+      updateMetrics();
+      showToast("模拟猫神已路过键盘");
+    }
+
+    input.addEventListener("input", updateMetrics);
+    input.addEventListener("focus", () => {
+      focusState.textContent = "猫语接收中";
+    });
+    input.addEventListener("blur", () => {
+      focusState.textContent = "点击输入区继续接收猫语";
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        event.preventDefault();
+        submitOracle();
+      }
+    });
+
+    document.querySelector("#fakeCat").addEventListener("click", simulateCat);
+    document.querySelector("#clearBtn").addEventListener("click", () => {
+      input.value = "";
+      updateMetrics();
+      input.focus();
+      showToast("键盘祭坛已清空");
+    });
+    document.querySelector("#copyBtn").addEventListener("click", copyReading);
+    document.querySelector("#downloadBtn").addEventListener("click", downloadCard);
+    historyList.addEventListener("click", (event) => {
+      const item = event.target.closest("li");
+      if (!item) return;
+      const data = state.history[Number(item.dataset.index)];
+      if (!data) return;
+      state.currentReading = data;
+      renderReading(data);
+      showToast("已召回历史猫谕");
+    });
+
+    modKey.textContent = navigator.platform.toLowerCase().includes("mac") ? "⌘" : "Ctrl";
+    input.focus();
+    updateMetrics();
+  </script>
+</body>
+</html>
